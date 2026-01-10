@@ -49,6 +49,7 @@ class RiskManager {
         conditionId: string
     ): Promise<RiskCheckResult> {
         const checks = [
+            () => this.checkMarketResolved(currentPrice),  // Önce market çözülmüş mü kontrol et
             () => this.checkMinTradeAmount(amount),
             () => this.checkMaxPositionSize(amount),
             () => this.checkDailyLossLimit(),
@@ -72,6 +73,20 @@ class RiskManager {
         
         console.log(`✅ All risk checks passed. Amount: ${amount} → ${adjustedResult.adjustedAmount}`);
         return adjustedResult;
+    }
+
+    /**
+     * Market çözülmüş mü kontrolü (fiyat 0.99+ veya 0.01- ise market bitmiş demektir)
+     * Daha gevşek threshold - hızlı marketler için
+     */
+    checkMarketResolved(currentPrice: number): RiskCheckResult {
+        if (currentPrice >= 0.99 || currentPrice <= 0.01) {
+            return {
+                allowed: false,
+                reason: `Market already resolved (price: ${currentPrice}). Skipping expired market.`,
+            };
+        }
+        return { allowed: true };
     }
 
     /**

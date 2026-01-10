@@ -30,37 +30,37 @@ export interface RiskConfig {
     skipIfPriceChangedPercent: number;  // Fiyat bu kadar değiştiyse işlemi atla
 }
 
-// Default risk configuration - sabit değerler, .env'den özelleştirilebilir
+// Default risk configuration - $30 bakiye için optimize edildi
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
     // Position Limits
-    maxPositionSizeUSDC: 100,
-    maxTotalExposureUSDC: 500,
-    minTradeAmountUSDC: 1,
+    maxPositionSizeUSDC: 10,            // Tek pozisyon max $10 (bakiyenin %33'ü)
+    maxTotalExposureUSDC: 25,           // Toplam açık pozisyon max $25
+    minTradeAmountUSDC: 0.1,            // Minimum $0.10 trade (küçük işlemleri de kopyala)
     
     // Loss Limits
-    maxDailyLossUSDC: 50,
-    maxDailyLossPercent: 10,
-    stopLossPercent: 20,
+    maxDailyLossUSDC: 6,                // Günlük max kayıp $6 (bakiyenin %20'si)
+    maxDailyLossPercent: 20,            // Günlük max %20 kayıp
+    stopLossPercent: 25,                // Pozisyon bazlı %25 stop-loss
     
     // Profit Targets
-    takeProfitPercent: 50,
+    takeProfitPercent: 40,              // Pozisyon bazlı %40 kar al
     
     // Slippage & Price Protection
-    maxSlippagePercent: 2,
-    maxPriceDifferencePercent: 5,
+    maxSlippagePercent: 5,              // %5 kayma toleransı (daha toleranslı)
+    maxPriceDifferencePercent: 10,      // Hedef fiyattan max %10 sapma
     
     // Trade Frequency
-    minTimeBetweenTradesMs: 5000,
-    maxTradesPerHour: 20,
-    maxTradesPerDay: 100,
+    minTimeBetweenTradesMs: 3000,       // İşlemler arası min 3 saniye
+    maxTradesPerHour: 15,               // Saatte max 15 işlem
+    maxTradesPerDay: 50,                // Günde max 50 işlem
     
     // Balance Protection
-    minBalanceToKeepUSDC: 10,
-    maxBalanceUsagePercent: 80,
+    minBalanceToKeepUSDC: 3,            // Her zaman $3 kalsın (acil durum için)
+    maxBalanceUsagePercent: 90,         // Bakiyenin max %90'ı kullanılabilir
     
     // Copy Trading Specific
-    copyRatioPercent: 100,
-    skipIfPriceChangedPercent: 10,
+    copyRatioPercent: 100,              // Hedef kullanıcının işlemini %100 kopyala (miktar otomatik ayarlanır)
+    skipIfPriceChangedPercent: 15,      // Fiyat %15'ten fazla değiştiyse atla
 };
 
 // Runtime'da ayarları özelleştirmek için

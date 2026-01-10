@@ -145,7 +145,7 @@ const doTrading = async (clobClient: ClobClient) => {
                 user_position,
                 {
                     ...trade,
-                    usdcSize: copyCheck.adjustedAmount, // Ayarlanmış miktar
+                    usdcSize: copyCheck.adjustedAmount ?? trade.usdcSize ?? 0, // Ayarlanmış miktar
                 },
                 my_balance,
                 user_balance

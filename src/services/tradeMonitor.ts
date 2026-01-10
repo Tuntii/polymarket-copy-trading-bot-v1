@@ -17,7 +17,7 @@ if (!USER_ADDRESS) {
 const UserActivity = getUserActivityModel(USER_ADDRESS);
 const UserPosition = getUserPositionModel(USER_ADDRESS);
 
-// Takip edilen son işlem timestamp'i
+// Takip edilen son işlem timestamp'i (milisaniye cinsinden)
 let lastFetchedTimestamp: number = 0;
 let isFirstRun: boolean = true;
 
@@ -32,7 +32,9 @@ const init = async () => {
             .exec();
         
         if (latestTrade) {
-            lastFetchedTimestamp = (latestTrade as UserActivityInterface).timestamp || 0;
+            // DB'de saniye cinsinden saklanıyor, milisaniyeye çevir
+            const dbTimestamp = (latestTrade as UserActivityInterface).timestamp || 0;
+            lastFetchedTimestamp = dbTimestamp * 1000;
             console.log(`📚 Loaded last trade timestamp: ${moment(lastFetchedTimestamp).format('YYYY-MM-DD HH:mm:ss')}`);
         }
         
@@ -80,7 +82,7 @@ const fetchUserPositions = async (): Promise<UserPositionInterface[]> => {
 const processNewTrades = async (activities: UserActivityInterface[]): Promise<number> => {
     let newTradesCount = 0;
     const now = Date.now();
-    const tooOldThreshold = now - (TOO_OLD_TIMESTAMP * 60 * 60 * 1000); // TOO_OLD_TIMESTAMP saat öncesi
+    const tooOldThreshold = now - (TOO_OLD_TIMESTAMP * 60 * 1000); // TOO_OLD_TIMESTAMP dakika öncesi
 
     for (const activity of activities) {
         // Sadece TRADE tipindeki işlemleri al
@@ -88,10 +90,10 @@ const processNewTrades = async (activities: UserActivityInterface[]): Promise<nu
             continue;
         }
 
-        // Timestamp kontrolü
-        const activityTimestamp = activity.timestamp || 0;
+        // Timestamp kontrolü - API saniye döndürüyor, milisaniyeye çevir
+        const activityTimestamp = (activity.timestamp || 0) * 1000;
         
-        // Çok eski işlemleri atla
+        // Çok eski işlemleri atla (sessizce)
         if (activityTimestamp < tooOldThreshold) {
             continue;
         }
@@ -164,9 +166,10 @@ const saveActivityToDB = async (activity: UserActivityInterface, alreadyProcesse
 
         await newActivity.save();
         
-        // En son timestamp'i güncelle
-        if ((activity.timestamp || 0) > lastFetchedTimestamp) {
-            lastFetchedTimestamp = activity.timestamp || 0;
+        // En son timestamp'i güncelle (milisaniye cinsinden sakla)
+        const activityTimestampMs = (activity.timestamp || 0) * 1000;
+        if (activityTimestampMs > lastFetchedTimestamp) {
+            lastFetchedTimestamp = activityTimestampMs;
         }
     } catch (error: any) {
         // Duplicate key hatası olabilir, sessizce geç
@@ -312,7 +315,7 @@ const tradeMonitor = async () => {
     console.log('\n📡 Trade Monitor Starting...');
     console.log(`   👤 Target User: ${USER_ADDRESS}`);
     console.log(`   ⏱️  Fetch Interval: ${FETCH_INTERVAL} seconds`);
-    console.log(`   📅 Too Old Threshold: ${TOO_OLD_TIMESTAMP} hours\n`);
+    console.log(`   📅 Too Old Threshold: ${TOO_OLD_TIMESTAMP} minutes\n`);
 
     await init();
 
