@@ -41,8 +41,80 @@ const init = async () => {
         // İlk çalışmada geçmiş işlemleri işleme
         isFirstRun = true;
         console.log('✅ Trade monitor initialized');
+        
+        // 🚀 Başlangıçta hedef kullanıcının açık pozisyonlarını kopyala
+        await copyOpenPositionsOnStartup();
+        
     } catch (error) {
         console.error('❌ Error initializing trade monitor:', error);
+    }
+};
+
+/**
+ * Bot başladığında hedef kullanıcının açık pozisyonlarını kopyala
+ */
+const copyOpenPositionsOnStartup = async () => {
+    try {
+        console.log('\n🔄 Checking target user\'s open positions...');
+        
+        const positions = await fetchUserPositions();
+        
+        // Sadece AKTIF ve İŞLEM YAPILABİLİR pozisyonları al
+        // curPrice 0.01 ile 0.99 arasında olmalı (market hala açık)
+        const activePositions = positions.filter(p => 
+            p.size && p.size > 0 && 
+            p.currentValue && p.currentValue > 0 &&
+            p.curPrice && p.curPrice > 0.01 && p.curPrice < 0.99 // Market hala aktif
+        );
+        
+        if (activePositions.length === 0) {
+            console.log('📭 No tradeable positions found (all markets resolved)');
+            return;
+        }
+        
+        console.log(`\n📊 Found ${activePositions.length} TRADEABLE position(s) to copy:\n`);
+        
+        for (const position of activePositions) {
+            console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            console.log(`📈 Position: ${position.title}`);
+            console.log(`   💰 Size: ${position.size?.toFixed(2)}`);
+            console.log(`   📊 Cur Price: ${position.curPrice?.toFixed(3)}`);
+            console.log(`   💵 Current Value: $${position.currentValue?.toFixed(2)}`);
+            console.log(`   📈 PnL: ${position.percentPnl?.toFixed(2)}%`);
+            
+            // Pozisyonu trade olarak kaydet ve kopyala
+            const tradeActivity = {
+                proxyWallet: position.proxyWallet || USER_ADDRESS,
+                timestamp: Math.floor(Date.now() / 1000), // şu anki zaman
+                conditionId: position.conditionId,
+                type: 'TRADE',
+                size: position.size,
+                usdcSize: position.currentValue,
+                transactionHash: `STARTUP_COPY_${position.conditionId}_${Date.now()}`,
+                price: position.curPrice,
+                asset: position.asset,
+                side: 'BUY',
+                outcomeIndex: position.outcomeIndex,
+                title: position.title,
+                slug: position.slug,
+                icon: position.icon,
+                eventSlug: position.eventSlug,
+                outcome: position.outcome,
+                name: '',
+                pseudonym: '',
+                bio: '',
+                profileImage: '',
+                profileImageOptimized: '',
+            } as Partial<UserActivityInterface>;
+            
+            // Bu pozisyonu yeni trade olarak kaydet (kopyalanacak)
+            await saveActivityToDB(tradeActivity as UserActivityInterface, false);
+        }
+        
+        console.log(`\n✅ ${activePositions.length} tradeable position(s) queued for copying\n`);
+        
+    } catch (error) {
+        console.error('❌ Error copying open positions:', error);
     }
 };
 
