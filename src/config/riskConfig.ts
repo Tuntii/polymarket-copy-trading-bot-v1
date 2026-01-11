@@ -30,37 +30,37 @@ export interface RiskConfig {
     skipIfPriceChangedPercent: number;  // Fiyat bu kadar değiştiyse işlemi atla
 }
 
-// Default risk configuration - $30 bakiye için optimize edildi
+// Default risk configuration - $10 bakiye için MAKSİMUM TRADE optimize edildi
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
-    // Position Limits
-    maxPositionSizeUSDC: 10,            // Tek pozisyon max $10 (bakiyenin %33'ü)
-    maxTotalExposureUSDC: 25,           // Toplam açık pozisyon max $25
-    minTradeAmountUSDC: 0.1,            // Minimum $0.10 trade (küçük işlemleri de kopyala)
+    // Position Limits - KÜÇÜK POZİSYONLAR = FAZLA TRADE
+    maxPositionSizeUSDC: 1.5,           // Tek pozisyon max $1.50 (daha fazla trade için küçük tut)
+    maxTotalExposureUSDC: 10,           // Toplam açık pozisyon max $10
+    minTradeAmountUSDC: 0.5,            // Minimum $0.50 trade (Polymarket minimum)
     
-    // Loss Limits
-    maxDailyLossUSDC: 6,                // Günlük max kayıp $6 (bakiyenin %20'si)
-    maxDailyLossPercent: 20,            // Günlük max %20 kayıp
-    stopLossPercent: 25,                // Pozisyon bazlı %25 stop-loss
+    // Loss Limits - AGRESİF
+    maxDailyLossUSDC: 5,                // Günlük max kayıp $5 (paranın yarısı - agresif)
+    maxDailyLossPercent: 50,            // Günlük max %50 kayıp (agresif trading)
+    stopLossPercent: 40,                // Pozisyon bazlı %40 stop-loss (geniş)
     
     // Profit Targets
-    takeProfitPercent: 40,              // Pozisyon bazlı %40 kar al
+    takeProfitPercent: 30,              // Pozisyon bazlı %30 kar al (hızlı çık)
     
-    // Slippage & Price Protection
-    maxSlippagePercent: 5,              // %5 kayma toleransı (daha toleranslı)
-    maxPriceDifferencePercent: 10,      // Hedef fiyattan max %10 sapma
+    // Slippage & Price Protection - ÇOK TOLERANSLI (AGRESİF)
+    maxSlippagePercent: 50,             // %50 kayma toleransı (fiyat ne olursa olsun gir)
+    maxPriceDifferencePercent: 90,      // Hedef fiyattan max %90 sapma (neredeyse sınırsız)
     
-    // Trade Frequency
-    minTimeBetweenTradesMs: 3000,       // İşlemler arası min 3 saniye
-    maxTradesPerHour: 15,               // Saatte max 15 işlem
-    maxTradesPerDay: 50,                // Günde max 50 işlem
+    // Trade Frequency - MAKSİMUM
+    minTimeBetweenTradesMs: 500,        // İşlemler arası min 0.5 saniye (çok hızlı)
+    maxTradesPerHour: 100,              // Saatte max 100 işlem
+    maxTradesPerDay: 500,               // Günde max 500 işlem
     
-    // Balance Protection
-    minBalanceToKeepUSDC: 3,            // Her zaman $3 kalsın (acil durum için)
-    maxBalanceUsagePercent: 90,         // Bakiyenin max %90'ı kullanılabilir
+    // Balance Protection - MİNİMAL
+    minBalanceToKeepUSDC: 0.5,          // Sadece $0.50 kalsın (agresif)
+    maxBalanceUsagePercent: 95,         // Bakiyenin %95'i kullanılabilir
     
-    // Copy Trading Specific
-    copyRatioPercent: 100,              // Hedef kullanıcının işlemini %100 kopyala (miktar otomatik ayarlanır)
-    skipIfPriceChangedPercent: 15,      // Fiyat %15'ten fazla değiştiyse atla
+    // Copy Trading Specific - AGRESİF
+    copyRatioPercent: 100,              // Hedef işlemi kopyala (miktar otomatik $1.50'ye scale)
+    skipIfPriceChangedPercent: 95,      // Fiyat %95 değişse bile gir (neredeyse her zaman kopyala)
 };
 
 // Runtime'da ayarları özelleştirmek için

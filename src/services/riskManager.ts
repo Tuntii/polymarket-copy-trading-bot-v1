@@ -46,10 +46,12 @@ class RiskManager {
         amount: number,
         currentPrice: number,
         originalPrice: number,
-        conditionId: string
+        conditionId: string,
+        title?: string // Market başlığı - zaman kontrolü için
     ): Promise<RiskCheckResult> {
         const checks = [
             () => this.checkMarketResolved(currentPrice),  // Önce market çözülmüş mü kontrol et
+            () => title ? this.checkMarketTimeRemaining(title, 4) : { allowed: true }, // 4 dk kalan zaman kontrolü
             () => this.checkMinTradeAmount(amount),
             () => this.checkMaxPositionSize(amount),
             () => this.checkDailyLossLimit(),
@@ -76,15 +78,99 @@ class RiskManager {
     }
 
     /**
-     * Market çözülmüş mü kontrolü (fiyat 0.99+ veya 0.01- ise market bitmiş demektir)
-     * Daha gevşek threshold - hızlı marketler için
+     * Market başlığından bitiş zamanını parse et ve kalan dakikayı hesapla
+     * Örnek: "Bitcoin Up or Down - January 10, 6:30PM-6:45PM ET"
      */
-    checkMarketResolved(currentPrice: number): RiskCheckResult {
-        if (currentPrice >= 0.99 || currentPrice <= 0.01) {
+    parseMarketEndTime(title: string): { minutesRemaining: number; endTime: string } | null {
+        try {
+            // Pattern: "HH:MMAM/PM-HH:MMAM/PM ET" formatını yakala
+            const timePattern = /(\d{1,2}):(\d{2})(AM|PM)-(\d{1,2}):(\d{2})(AM|PM)\s*ET/i;
+            const match = title.match(timePattern);
+            
+            if (!match) {
+                return null; // Bu format değilse normal trade
+            }
+
+            const [_, startHour, startMin, startAmPm, endHour, endMin, endAmPm] = match;
+            
+            // Bitiş saatini 24 saat formatına çevir
+            let endHour24 = parseInt(endHour);
+            if (endAmPm.toUpperCase() === 'PM' && endHour24 !== 12) {
+                endHour24 += 12;
+            } else if (endAmPm.toUpperCase() === 'AM' && endHour24 === 12) {
+                endHour24 = 0;
+            }
+
+            // Şu anki zamanı ET (Eastern Time) olarak al
+            // ET = UTC-5 (EST) veya UTC-4 (EDT)
+            const now = new Date();
+            const utcHours = now.getUTCHours();
+            const utcMinutes = now.getUTCMinutes();
+            
+            // EST (UTC-5) kullan - kış saati
+            const etHours = (utcHours - 5 + 24) % 24;
+            const etMinutes = utcMinutes;
+            
+            // Şu anki ET zamanı dakika cinsinden
+            const currentMinutesET = etHours * 60 + etMinutes;
+            
+            // Market bitiş zamanı dakika cinsinden
+            const endMinutesET = endHour24 * 60 + parseInt(endMin);
+            
+            // Kalan dakika
+            let minutesRemaining = endMinutesET - currentMinutesET;
+            
+            // Gece yarısı geçişi
+            if (minutesRemaining < -60) {
+                minutesRemaining += 24 * 60;
+            }
+            
+            const endTimeStr = `${endHour}:${endMin}${endAmPm} ET`;
+            
+            return { minutesRemaining, endTime: endTimeStr };
+        } catch (error) {
+            console.error('Error parsing market time:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Market'te yeterli zaman kaldı mı kontrolü (minimum 10 dakika)
+     */
+    checkMarketTimeRemaining(title: string, minMinutes: number = 10): RiskCheckResult {
+        const timeInfo = this.parseMarketEndTime(title);
+        
+        if (!timeInfo) {
+            // Zaman formatı bulunamadıysa normal trade'e izin ver
+            return { allowed: true };
+        }
+
+        if (timeInfo.minutesRemaining < minMinutes) {
             return {
                 allowed: false,
-                reason: `Market already resolved (price: ${currentPrice}). Skipping expired market.`,
+                reason: `⏰ Market ends in ${timeInfo.minutesRemaining.toFixed(0)} min (${timeInfo.endTime}). Need ${minMinutes}+ min remaining.`,
             };
+        }
+
+        console.log(`✅ Market time OK: ${timeInfo.minutesRemaining.toFixed(0)} min remaining until ${timeInfo.endTime}`);
+        return { allowed: true };
+    }
+
+    /**
+     * Market çözülmüş mü kontrolü - SADECE TAM ÇÖZÜLMÜŞ MARKETLER ATLANIR
+     * AGRESİF MOD: 0.999 ve 0.001 dışında her şeye izin ver
+     */
+    checkMarketResolved(currentPrice: number): RiskCheckResult {
+        // Sadece tam 1.00 veya 0.00'a çok yakın olanları atla
+        if (currentPrice >= 0.999 || currentPrice <= 0.001) {
+            return {
+                allowed: false,
+                reason: `Market fully resolved (price: ${currentPrice}). Cannot trade.`,
+            };
+        }
+        // 0.99 civarı bile olsa trade'e izin ver - hızlı marketler için
+        if (currentPrice >= 0.98) {
+            console.log(`⚠️ Warning: High price (${currentPrice}) - market may resolve soon`);
         }
         return { allowed: true };
     }

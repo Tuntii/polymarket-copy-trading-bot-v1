@@ -35,13 +35,14 @@ const canCopyTrade = async (
     const originalPrice = trade.price || 0;
     const amount = trade.usdcSize || 0;
 
-    // Risk kontrolü yap
+    // Risk kontrolü yap - title'ı da gönder (zaman kontrolü için)
     const riskCheck = await riskManager.performFullRiskCheck(
         side,
         amount,
         currentPrice,
         originalPrice,
-        trade.conditionId || ''
+        trade.conditionId || '',
+        trade.title || '' // Market başlığı - zaman kontrolü için
     );
 
     if (!riskCheck.allowed) {

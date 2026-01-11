@@ -61,26 +61,43 @@ const copyOpenPositionsOnStartup = async () => {
         
         // Sadece AKTIF ve İŞLEM YAPILABİLİR pozisyonları al
         // curPrice 0.01 ile 0.99 arasında olmalı (market hala açık)
-        const activePositions = positions.filter(p => 
+        const tradeablePositions = positions.filter(p => 
             p.size && p.size > 0 && 
             p.currentValue && p.currentValue > 0 &&
             p.curPrice && p.curPrice > 0.01 && p.curPrice < 0.99 // Market hala aktif
         );
         
-        if (activePositions.length === 0) {
-            console.log('📭 No tradeable positions found (all markets resolved)');
+        // 🎯 SADECE KAZANAN POZİSYONLARI AL (PnL > 0)
+        const winningPositions = tradeablePositions.filter(p => 
+            p.percentPnl && p.percentPnl > 0
+        );
+        
+        // Kaybeden pozisyonları logla
+        const losingPositions = tradeablePositions.filter(p => 
+            !p.percentPnl || p.percentPnl <= 0
+        );
+        
+        if (losingPositions.length > 0) {
+            console.log(`\n⚠️ Skipping ${losingPositions.length} LOSING position(s):`);
+            for (const pos of losingPositions) {
+                console.log(`   ❌ ${pos.title} (PnL: ${pos.percentPnl?.toFixed(2) || 0}%)`);
+            }
+        }
+        
+        if (winningPositions.length === 0) {
+            console.log('📭 No WINNING tradeable positions found');
             return;
         }
         
-        console.log(`\n📊 Found ${activePositions.length} TRADEABLE position(s) to copy:\n`);
+        console.log(`\n📊 Found ${winningPositions.length} WINNING position(s) to copy:\n`);
         
-        for (const position of activePositions) {
+        for (const position of winningPositions) {
             console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
             console.log(`📈 Position: ${position.title}`);
             console.log(`   💰 Size: ${position.size?.toFixed(2)}`);
             console.log(`   📊 Cur Price: ${position.curPrice?.toFixed(3)}`);
             console.log(`   💵 Current Value: $${position.currentValue?.toFixed(2)}`);
-            console.log(`   📈 PnL: ${position.percentPnl?.toFixed(2)}%`);
+            console.log(`   ✅ PnL: +${position.percentPnl?.toFixed(2)}% (WINNING)`);
             
             // Pozisyonu trade olarak kaydet ve kopyala
             const tradeActivity = {
@@ -111,7 +128,7 @@ const copyOpenPositionsOnStartup = async () => {
             await saveActivityToDB(tradeActivity as UserActivityInterface, false);
         }
         
-        console.log(`\n✅ ${activePositions.length} tradeable position(s) queued for copying\n`);
+        console.log(`\n✅ ${winningPositions.length} WINNING position(s) queued for copying\n`);
         
     } catch (error) {
         console.error('❌ Error copying open positions:', error);
