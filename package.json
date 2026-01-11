@@ -35,12 +35,14 @@
     },
     "dependencies": {
         "@polymarket/clob-client": "^4.14.0",
+        "@types/ws": "^8.18.1",
         "axios": "^1.7.9",
         "chalk": "^5.4.1",
         "dotenv": "^16.4.7",
         "ethers": "^5.7.2",
         "moment": "^2.30.1",
         "mongoose": "^8.9.5",
-        "ora": "^8.2.0"
+        "ora": "^8.2.0",
+        "ws": "^8.19.0"
     }
 }

@@ -35,7 +35,7 @@ export const DEFAULT_RISK_CONFIG: RiskConfig = {
     // Position Limits - KÜÇÜK POZİSYONLAR = FAZLA TRADE
     maxPositionSizeUSDC: 1.5,           // Tek pozisyon max $1.50 (daha fazla trade için küçük tut)
     maxTotalExposureUSDC: 10,           // Toplam açık pozisyon max $10
-    minTradeAmountUSDC: 0.5,            // Minimum $0.50 trade (Polymarket minimum)
+    minTradeAmountUSDC: 0.01,           // Minimum $0.01 trade (kullanıcı isteği)
     
     // Loss Limits - AGRESİF
     maxDailyLossUSDC: 5,                // Günlük max kayıp $5 (paranın yarısı - agresif)
@@ -45,9 +45,10 @@ export const DEFAULT_RISK_CONFIG: RiskConfig = {
     // Profit Targets
     takeProfitPercent: 30,              // Pozisyon bazlı %30 kar al (hızlı çık)
     
-    // Slippage & Price Protection - ÇOK TOLERANSLI (AGRESİF)
-    maxSlippagePercent: 50,             // %50 kayma toleransı (fiyat ne olursa olsun gir)
-    maxPriceDifferencePercent: 90,      // Hedef fiyattan max %90 sapma (neredeyse sınırsız)
+    // Slippage & Price Protection - INSTANT COPY İÇİN OPTIMIZE
+    // WebSocket ile anlık kopyalandığı için fiyat farkı minimal olacak
+    maxSlippagePercent: 25,             // Max 0.25 fiyat farkı (hızlı kopya için toleranslı)
+    maxPriceDifferencePercent: 30,      // Max 0.30 fiyat farkı
     
     // Trade Frequency - MAKSİMUM
     minTimeBetweenTradesMs: 500,        // İşlemler arası min 0.5 saniye (çok hızlı)
@@ -58,9 +59,9 @@ export const DEFAULT_RISK_CONFIG: RiskConfig = {
     minBalanceToKeepUSDC: 0.5,          // Sadece $0.50 kalsın (agresif)
     maxBalanceUsagePercent: 95,         // Bakiyenin %95'i kullanılabilir
     
-    // Copy Trading Specific - AGRESİF
-    copyRatioPercent: 100,              // Hedef işlemi kopyala (miktar otomatik $1.50'ye scale)
-    skipIfPriceChangedPercent: 95,      // Fiyat %95 değişse bile gir (neredeyse her zaman kopyala)
+    // Copy Trading Specific - INSTANT COPY MODE
+    copyRatioPercent: 100,              // Hedef işlemi %100 kopyala
+    skipIfPriceChangedPercent: 35,      // Max 0.35 fiyat farkı (hızlı kopyada biraz tolerans)
 };
 
 // Runtime'da ayarları özelleştirmek için

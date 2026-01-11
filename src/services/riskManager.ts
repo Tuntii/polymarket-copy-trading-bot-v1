@@ -51,7 +51,7 @@ class RiskManager {
     ): Promise<RiskCheckResult> {
         const checks = [
             () => this.checkMarketResolved(currentPrice),  // Önce market çözülmüş mü kontrol et
-            () => title ? this.checkMarketTimeRemaining(title, 4) : { allowed: true }, // 4 dk kalan zaman kontrolü
+            () => title ? this.checkMarketTimeRemaining(title, 0.5) : { allowed: true }, // 30 saniye kalan zaman kontrolü (INSTANT COPY)
             () => this.checkMinTradeAmount(amount),
             () => this.checkMaxPositionSize(amount),
             () => this.checkDailyLossLimit(),
@@ -256,30 +256,35 @@ class RiskManager {
     }
 
     /**
-     * Slippage kontrolü
+     * Slippage kontrolü - POLYMARKET İÇİN OPTİMİZE
+     * Polymarket'te fiyatlar 0-1 arası olduğu için mutlak fark kullanıyoruz
+     * Örnek: 0.50 -> 0.55 = 5% slippage (0.05 * 100)
      */
     checkSlippage(currentPrice: number, originalPrice: number): RiskCheckResult {
-        const slippage = Math.abs((currentPrice - originalPrice) / originalPrice) * 100;
+        // Mutlak fiyat farkı (Polymarket için)
+        const slippage = Math.abs(currentPrice - originalPrice) * 100;
         
         if (slippage > this.config.maxSlippagePercent) {
             return {
                 allowed: false,
-                reason: `Slippage too high: ${slippage.toFixed(2)}% > ${this.config.maxSlippagePercent}%`,
+                reason: `Slippage too high: ${slippage.toFixed(2)}% (${originalPrice.toFixed(3)} → ${currentPrice.toFixed(3)}) > ${this.config.maxSlippagePercent}%`,
             };
         }
         return { allowed: true };
     }
 
     /**
-     * Fiyat farkı kontrolü (copy trading için)
+     * Fiyat farkı kontrolü (copy trading için) - POLYMARKET İÇİN OPTİMİZE
+     * Polymarket'te fiyatlar 0-1 arası olduğu için mutlak fark kullanıyoruz
      */
     checkPriceDifference(currentPrice: number, originalPrice: number): RiskCheckResult {
-        const priceDiff = Math.abs((currentPrice - originalPrice) / originalPrice) * 100;
+        // Mutlak fiyat farkı (Polymarket için)
+        const priceDiff = Math.abs(currentPrice - originalPrice) * 100;
         
         if (priceDiff > this.config.skipIfPriceChangedPercent) {
             return {
                 allowed: false,
-                reason: `Price changed too much since original trade: ${priceDiff.toFixed(2)}% > ${this.config.skipIfPriceChangedPercent}%`,
+                reason: `Price changed too much: ${priceDiff.toFixed(2)}% (${originalPrice.toFixed(3)} → ${currentPrice.toFixed(3)}) > ${this.config.skipIfPriceChangedPercent}%`,
             };
         }
         return { allowed: true };

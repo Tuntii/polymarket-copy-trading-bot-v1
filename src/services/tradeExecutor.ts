@@ -155,6 +155,12 @@ const doTrading = async (clobClient: ClobClient) => {
             // Trade'i kaydet
             riskManager.recordTrade();
 
+            // Trade'i başarılı olarak işaretle (bir daha işlenmesin)
+            await UserActivity.updateOne(
+                { _id: trade._id },
+                { bot: true, botExcutedTime: RETRY_LIMIT }
+            );
+
             console.log('\n✅ Trade processed successfully\n');
 
         } catch (error) {
@@ -162,10 +168,22 @@ const doTrading = async (clobClient: ClobClient) => {
             
             // Hata durumunda retry sayısını artır
             const currentRetry = (trade.botExcutedTime || 0) + 1;
-            await UserActivity.updateOne(
-                { _id: trade._id },
-                { botExcutedTime: currentRetry }
-            );
+            
+            if (currentRetry >= RETRY_LIMIT) {
+                // Retry limiti aşıldı, bir daha deneme
+                await UserActivity.updateOne(
+                    { _id: trade._id },
+                    { bot: true, botExcutedTime: currentRetry }
+                );
+                console.log(`⚠️ Trade marked as processed after ${currentRetry} retries\n`);
+            } else {
+                // Retry sayısını artır
+                await UserActivity.updateOne(
+                    { _id: trade._id },
+                    { botExcutedTime: currentRetry }
+                );
+                console.log(`🔄 Will retry (${currentRetry}/${RETRY_LIMIT})\n`);
+            }
         }
     }
 };
